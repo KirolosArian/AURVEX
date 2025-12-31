@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html class="dark" lang="ar" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="theme-color" content="#1a1a1a"/><title>Super Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: "#d4af35",
+                    "background-dark": "#1a1a1a"
+                },
+                fontFamily: {
+                    display: ["Manrope", "sans-serif"]
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    body {
+        background-image:
+            radial-gradient(circle at top left, rgba(212,175,53,0.1), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(212,175,53,0.1), transparent 30%);
+        margin: 0;
+        overflow: auto; /* allow vertical scrolling */
+        -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+        background-color: #1a1a1a;
+    }
+
+    #bgCanvas {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        width: 100vw;
+        /* use dynamic viewport height so mobile address bar changes don't shrink the visual */
+        height: 100dvh;
+        min-height: 100dvh;
+        pointer-events: none; /* allow clicks through */
+    }
+
+    .aurvex-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(212,175,53,0.3);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    /* ========== الجدول ========== */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(255,255,255,0.03);
+        font-size: 0.875rem;
+    }
+
+    th, td {
+        padding: 6px 10px;
+    }
+
+    [dir="rtl"] th, [dir="rtl"] td {
+        text-align: right;
+    }
+
+    [dir="ltr"] th, [dir="ltr"] td {
+        text-align: left;
+    }
+
+    th {
+        font-size: 0.8rem;
+        background: rgba(212,175,53,0.1);
+        border-bottom: 1px solid rgba(212,175,53,0.3);
+    }
+
+    tr {
+        line-height: 1.4;
+    }
+
+    tbody tr:hover {
+        background: rgba(212,175,53,0.05);
+    }
+
+    /* ========== Dropdown Menu ========== */
+    #accountWrapper {
+        position: fixed;
+        top: 72px; /* will be adjusted when opening */
+        width: 360px;
+        max-width: calc(100% - 32px);
+        margin-top: 8px;
+        z-index: 10005; /* raised so it sits above overlay and other content */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s ease;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+        background: rgba(26,26,26,0.98);
+        border: 1px solid rgba(212,175,53,0.4);
+        border-radius: 12px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,53,0.2);
+        pointer-events: auto;
+    }
+
+    [dir="rtl"] #accountWrapper {
+        right: 12px;
+        left: auto;
+    }
+
+    [dir="ltr"] #accountWrapper {
+        left: 12px;
+        right: auto;
+    }
+
+    #accountWrapper.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    #accountWrapper a {
+        font-size: 0.9rem;
+        padding: 10px 16px;
+        transition: box-shadow 0.18s ease, transform 0.12s ease;
+        will-change: transform, box-shadow;
+    }
+
+    /* Hover & focus state to indicate interactivity (visible border-like highlight) */
+    #accountWrapper a:hover,
+    #accountWrapper a:focus-visible,
+    #accountWrapper a:active,
+    #accountWrapper a.touch-pressed {
+        box-shadow: 0 0 0 2px rgba(212,175,53,0.95), 0 8px 24px rgba(0,0,0,0.55);
+        transform: translateY(-2px);
+        outline: none; /* use box-shadow for visual focus */
+    }
+
+    /* Improve touch behavior and remove default tap highlight on iOS/Android */
+    #accountWrapper a {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    #accountWrapper .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    /* Arrow Rotation */
+    #accountArrow {
+        transition: transform 0.3s ease;
+    }
+
+    #accountArrow.rotate-180 {
+        transform: rotate(180deg);
+    }
+
+    /* Header Layout (single-line, no overlap) */
+    header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+    }
+
+    .header-account, .header-lang {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-title {
+        flex: 1 1 auto;
+        text-align: center;
+        font-size: 1.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0 8px;
+    }
+
+    /* ensure order flips in RTL naturally (we use flex-direction row, and body dir will visually rearrange content) */
+    [dir="rtl"] header {
+        direction: rtl;
+    }
+
+    /* Overlay used to dim the page when dropdown is open */
+    #menuOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        backdrop-filter: blur(2px);
+        z-index: 10000; /* below accountWrapper */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+        pointer-events: auto;
+    }
+
+    #menuOverlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Responsive behavior for small screens */
+    @media (max-width: 640px) {
+        /* Make dropdown full-width with comfortable padding */
+        #accountWrapper {
+            left: 12px !important;
+            right: 12px !important;
+            width: auto !important;
+            max-width: none !important;
+            border-radius: 10px !important;
+            top: 64px !important; /* below header */
+            max-height: calc(100vh - 88px) !important;
+        }
+
+        /* Make header items slightly smaller and more balanced on mobile */
+        header {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .header-title {
+            font-size: 1rem;
+            letter-spacing: 0.02em;
+            line-height: 1.1;
+        }
+
+        /* shrink account and language controls */
+        .header-account button {
+            gap: 8px;
+            padding: 6px 6px;
+            font-size: 0.95rem;
+        }
+
+        .header-account .size-10 {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+        }
+
+        .header-account .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        #accountName { font-size: 0.95rem; }
+
+        .header-lang {
+            gap: 6px;
+            font-size: 0.95rem;
+            padding: 6px 8px;
+        }
+
+        .header-lang button {
+            font-size: 0.9rem;
+            padding: 4px 6px;
+        }
+
+        .header-lang, .header-account {
+            transform: translateY(-50%) scale(1);
+        }
+
+        /* ensure table is scrollable horizontally on small screens */
+        .aurvex-card.overflow-x-auto table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+
+    /* Very small screens: <480px fix header and spacing */
+    @media (max-width: 480px) {
+        header {
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            gap: 8px;
+            height: 56px;
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+        }
+
+        .header-title {
+            font-size: 0.95rem;
+            margin: 0 6px;
+            min-width: 0; /* allow shrinking */
+        }
+
+        /* keep account and lang at edges but slightly lower */
+        .header-account, .header-lang {
+            transform: translateY(6px);
+            flex: 0 0 auto;
+        }
+
+        /* explicit ordering to ensure left/right placements depending on dir */
+        [dir="ltr"] .header-account { order: 0; }
+        [dir="ltr"] .header-title { order: 1; }
+        [dir="ltr"] .header-lang { order: 2; }
+
+        [dir="rtl"] .header-lang { order: 0; }
+        [dir="rtl"] .header-title { order: 1; }
+        [dir="rtl"] .header-account { order: 2; }
+
+        /* slightly reduce gaps inside controls */
+        .header-account button { gap: 6px; padding: 6px 6px; }
+        .header-lang { gap: 6px; padding: 6px 8px; }
+
+        /* account wrapper positioned below header on very small screens */
+        #accountWrapper { top: 64px !important; left: 8px !important; right: 8px !important; }
+    }
+
+    /* Extra tight layout for very small screens <=470px */
+    @media (max-width: 470px) {
+        header { gap: 6px; height: 54px; }
+        .header-title { font-size: 0.9rem; }
+        /* hide account name on tiny widths to save space */
+        .header-account #accountName { display: none; }
+        /* show short language labels instead of full text */
+        .header-lang .lang-full { display: none; }
+        .header-lang button::after { content: attr(data-short); display: inline-block; font-size: 0.95rem; }
+        .header-lang button { font-size: 0; padding: 4px 6px; }
+        /* ensure title can shrink */
+        .header-title { min-width: 0; }
+        .header-account, .header-lang { transform: translateY(4px); }
+    }
+
+    /* Modal: Add Shop */
+    .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 11000;
+    }
+    .modal.show { display: flex; }
+    .modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(2px);
+        transition: backdrop-filter 220ms ease, background-color 220ms ease;
+    }
+    /* stronger blur variant used for important modals */
+    .modal.strong .modal-overlay {
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(7px);
+    }
+    .modal-dialog {
+        position: relative;
+        width: 100%;
+        max-width: 540px;
+        margin: 16px;
+        padding: 20px;
+        border-radius: 12px;
+        z-index: 11001;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        transform: translateY(0);
+        transition: transform 200ms cubic-bezier(.2,.9,.2,1), opacity 200ms ease;
+    }
+    .modal.show .modal-dialog { transform: translateY(-8px); opacity: 1; }
+    .modal.strong .modal-dialog { z-index: 12000; transform: translateY(-12px) scale(1.01); }
+    .modal .form-row { margin-bottom: 12px; display:flex; flex-direction:column; gap:6px; }
+    .modal label { font-size: 0.95rem; }
+    .modal input[type="text"], .modal input[type="number"], .modal input[type="date"], .modal select {
+        padding: 8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.04); color: #E6EDF3; width:100%;
+        -webkit-appearance: none; appearance: none; padding-right: 36px; position: relative; font-size: 0.98rem;
+        transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+    /* add a small chevron to indicate dropdown (works on most browsers) */
+    .modal select {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E6EDF3' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+        background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+    }
+    /* try to style option text for improved contrast where supported */
+    .modal select option { color: #0b1220; background: #E6EDF3; }
+
+    /* readonly/disabled fields should not appear bright white */
+    .modal input[readonly], .modal input[disabled], .modal select[disabled] {
+        background: rgba(255,255,255,0.02);
+        color: #E6EDF3;
+        opacity: 1;
+    }
+    /* remove browser default focus outline (blue on many browsers) and use a subtle border instead */
+    .modal input:focus, .modal select:focus, .modal textarea:focus {
+        outline: none;
+        border-color: rgba(255,255,255,0.34);
+        box-shadow: 0 0 0 4px rgba(255,255,255,0.06);
+    }
+    .modal .error { color: #ff6b6b; font-size:0.9rem; min-height:18px; }
+    .modal .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+    .modal .actions button { padding:8px 12px; border-radius:8px; }
+</style>
+
+</head><body class="font-display text-white">
+<canvas id="bgCanvas"></canvas>
+<div class="min-h-screen flex flex-col relative z-10">
+    <div id="menuOverlay"></div>
+<!-- ================= HEADER ================= -->
+<header class="px-6 py-4 border-b border-primary/30 bg-white/5 backdrop-blur">
+    <!-- Account Button -->
+    <div class="header-account">
+        <button id="accountBtn" class="flex items-center gap-3 hover:text-primary transition">
+            <div class="size-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+            <span id="accountName" class="font-medium">Super Admin</span>
+            <span id="accountArrow" class="material-symbols-outlined transition-transform duration-300">
+                expand_more
+            </span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div id="accountWrapper" class="aurvex-card overflow-hidden">
+            <div class="py-3 border-b border-primary/20">
+                <a href="#" class="flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition">
+                    <span class="material-symbols-outlined">account_circle</span>
+                    <span class="menu-profile">الملف الشخصي</span>
+                </a>
+            </div>
+            <nav class="p-4 flex flex-col gap-2" style="background: rgba(26,26,26,0.95);">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/20 text-primary font-medium">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="menu-dashboard">الداشبورد الرئيسي</span>
+                </a>
+                <a href="ai-chat.html" id="menuAIChat" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">chat</span>
+                    <span class="menu-ai-chat">الدردشة الذكية</span>
+                </a>
+                <a href="reports.html" id="menuReports" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span class="menu-reports">رسائل من المشتركين</span>
+                </a>
+                <a href="add-shop.html" id="menuAddShop" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">add_business</span>
+                    <span class="menu-add-shop">إضافة Shop</span>
+                </a>
+                <a href="add-admin.html" id="menuAddAdmin" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">person_add</span>
+                    <span class="menu-add-admin">إنشاء حساب Admin</span>
+                </a>
+                <a href="add-employee.html" id="menuAddEmployee" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">person_add</span>
+                    <span class="menu-add-employee">إنشاء حساب Employee</span>
+                </a>
+                <a href="edit-shop.html" id="menuEditShop" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined">edit_note</span>
+                    <span class="menu-edit-shop">تعديل بيانات أي محل</span>
+                </a>
+                <a href="#" id="menuToggleSub" class="flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <span class="material-symbols-outlined toggle-icon">toggle_on</span>
+                    <span class="menu-toggle-sub">تفعيل اشتراك Shop</span>
+                </a>
+                <a href="#" id="menuDeleteAdmin" class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400">
+                    <span class="material-symbols-outlined">delete</span>
+                    <span class="menu-delete-admin">حذف ادمن</span>
+                </a>
+                <a href="#" id="menuDeleteShop" class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400">
+                    <span class="material-symbols-outlined">delete_forever</span>
+                    <span class="menu-delete-shop">حذف Shop</span>
+                </a>
+                <a href="#" id="menuDeleteEmployee" class="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400">
+                    <span class="material-symbols-outlined">person_remove</span>
+                    <span class="menu-delete-employee">حذف عامل</span>
+                </a>
+            </nav>
+            <div class="py-3 border-t border-primary/20">
+                <a href="#" class="flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition text-red-400 account-logout-bottom">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span class="menu-logout">تسجيل خروج</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Title -->
+    <h1 class="header-title text-primary text-2xl font-extrabold tracking-widest">AURVEX</h1>
+
+    <!-- Language Switch -->
+    <div class="header-lang flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2 border border-primary/30 w-fit">
+        <button id="langAr" class="text-primary font-medium" data-short="ع"><span class="lang-full">عربي</span></button>
+        <span class="text-white/50">|</span>
+        <button id="langEn" class="text-white/70 font-medium" data-short="EN"><span class="lang-full">English</span></button>
+    </div>
+</header>
+
+<!-- ================= MAIN CONTENT ================= -->
+<main id="mainContent" class="flex-1 p-8 overflow-y-auto pt-24">
+    <div class="mb-8">
+        <p class="text-2xl font-bold overview-title">نظرة عامة على الداشبورد</p>
+        <p class="text-white/60 text-sm mt-1">
+            <span class="today-label">تاريخ اليوم:</span> <span id="todayDate" class="text-primary font-bold"></span>
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+        <div class="aurvex-card rounded-xl p-6 text-center">
+            <p class="text-white/80 shops-count-label">عدد المحلات المشتركة</p>
+            <p id="shopsCount" class="text-primary text-4xl font-bold mt-4">5</p>
+            
+        </div>
+    </div>
+
+    <div class="aurvex-card rounded-xl p-8 overflow-x-auto">
+        <h3 class="text-2xl font-bold mb-6 text-primary shops-list-title flex items-center justify-between"><span class="shops-list-title-text">قائمة المحلات</span><button id="refreshShopsBtn" class="text-sm text-primary bg-white/5 px-3 py-1 rounded">تحديث</button></h3>
+        <table class="min-w-full divide-y divide-primary/20">
+            <thead>
+                <tr>
+                    <th class="table-shop-name">اسم المحل</th>
+                    <th class="table-amount">المبلغ المدفوع</th>
+                    <th class="table-duration">مدة الاشتراك (شهور)</th>
+                    <th class="table-start">تاريخ التفعيل</th>
+                    <th class="table-end">تاريخ الانتهاء</th>
+                    <th class="table-remaining">الأيام المتبقية</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-primary/20">
+                <tr><td>محل أ</td><td>100</td><td>1</td><td>2025-12-01</td><td>2026-01-01</td><td class="text-green-400 font-bold"><span class="days-value">2</span> <span class="days-unit">أيام</span></td></tr>
+                <tr><td>محل ب</td><td>200</td><td>2</td><td>2025-11-15</td><td>2026-01-15</td><td class="text-green-400 font-bold"><span class="days-value">16</span> <span class="days-unit">أيام</span></td></tr>
+                <tr><td>محل ج</td><td>150</td><td>1</td><td>2025-12-20</td><td>2026-01-20</td><td class="text-green-400 font-bold"><span class="days-value">21</span> <span class="days-unit">أيام</span></td></tr>
+                <tr><td>محل د</td><td>300</td><td>3</td><td>2025-10-01</td><td>2026-01-01</td><td class="text-green-400 font-bold"><span class="days-value">2</span> <span class="days-unit">أيام</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Admins List -->
+    <div class="aurvex-card rounded-xl p-8 overflow-x-auto mt-6">
+        <h3 class="text-2xl font-bold mb-6 text-primary">Admins</h3>
+        <table class="min-w-full divide-y divide-primary/20">
+            <thead>
+                <tr>
+                    <th class="table-admin-name">Name</th>
+                    <th class="table-admin-email">Email</th>
+                    <th class="table-admin-code">Code</th>
+                    <th class="table-admin-shop">Shop</th>
+                    </tr>
+            </thead>
+            <tbody id="adminsTbody" class="divide-y divide-primary/20">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Employees List -->
+    <div class="aurvex-card rounded-xl p-8 overflow-x-auto mt-6">
+        <h3 class="text-2xl font-bold mb-6 text-primary">Employees</h3>
+        <table class="min-w-full divide-y divide-primary/20">
+            <thead>
+                <tr>
+                    <th class="table-employee-name">Name</th>
+                    <th class="table-employee-email">Email</th>
+                    <th class="table-employee-code">Code</th>
+                    <th class="table-employee-shop">Shop</th>
+                </tr>
+            </thead>
+            <tbody id="employeesTbody" class="divide-y divide-primary/20">
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Add Admin Modal -->
+<div id="addAdminModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-overlay" data-close="true"></div>
+    <div class="modal-dialog aurvex-card" role="document" aria-labelledby="addAdminModalTitle">
+        <h3 id="addAdminModalTitle" class="text-xl font-bold mb-3">Create Admin</h3>
+        <form id="addAdminForm">
+            <div class="form-row">
+                <label id="addAdminNameLabel">Admin Name</label>
+                <input id="addAdminName" type="text" autocomplete="off" required />
+            </div>
+            <div class="form-row">
+                <label id="addAdminShopLabel">Select Shop</label>
+                <select id="addAdminShop"></select>
+            </div>
+            <div class="form-row">
+                <label id="addAdminEmailLabel">Email</label>
+                <div class="flex gap-2 items-center"><input id="addAdminEmail" type="text" readonly /><button type="button" id="addAdminCopyEmail" class="ml-2 text-sm">Copy</button></div>
+            </div>
+            <div class="form-row">
+                <label id="addAdminCodeLabel">Code</label>
+                <div class="flex gap-2 items-center"><input id="addAdminCode" type="text" readonly /><button type="button" id="addAdminRegenerate" class="ml-2 text-sm">Regenerate</button><button type="button" id="addAdminCopyCode" class="ml-2 text-sm">Copy</button></div>
+            </div>
+            <div class="actions">
+                <button type="button" id="addAdminCancel" class="text-white bg-transparent border border-white/10">Cancel</button>
+                <button type="submit" id="addAdminSubmit" class="bg-primary text-black font-bold">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div id="addEmployeeModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-overlay" data-close="true"></div>
+    <div class="modal-dialog aurvex-card" role="document" aria-labelledby="addEmployeeModalTitle">
+        <h3 id="addEmployeeModalTitle" class="text-xl font-bold mb-3">Create Employee</h3>
+        <form id="addEmployeeForm">
+            <div class="form-row">
+                <label id="addEmployeeNameLabel">Employee Name</label>
+                <input id="addEmployeeName" type="text" autocomplete="off" required />
+            </div>
+            <div class="form-row">
+                <label id="addEmployeeShopLabel">Select Shop</label>
+                <select id="addEmployeeShop"></select>
+            </div>
+            <div class="form-row">
+                <label id="addEmployeeEmailLabel">Email</label>
+                <div class="flex gap-2 items-center"><input id="addEmployeeEmail" type="text" readonly /><button type="button" id="addEmployeeCopyEmail" class="ml-2 text-sm">Copy</button></div>
+            </div>
+            <div class="form-row">
+                <label id="addEmployeeCodeLabel">Code</label>
+                <div class="flex gap-2 items-center"><input id="addEmployeeCode" type="text" readonly /><button type="button" id="addEmployeeRegenerate" class="ml-2 text-sm">Regenerate</button><button type="button" id="addEmployeeCopyCode" class="ml-2 text-sm">Copy</button></div>
+            </div>
+            <div class="actions">
+                <button type="button" id="addEmployeeCancel" class="text-white bg-transparent border border-white/10">Cancel</button>
+                <button type="submit" id="addEmployeeSubmit" class="bg-primary text-black font-bold">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Particles Background
+    const canvas = document.getElementById("bgCanvas");
+    const ctx = canvas.getContext("2d");
+    // helper to resize canvas to current viewport (handles mobile address bar changes)
+    function resizeCanvas() {
+        const w = Math.max(window.innerWidth, document.documentElement.clientWidth);
+        // Prefer screen height so the canvas remains full-size even when mobile address bar shows/hides
+        const h = (window.screen && window.screen.height) ? window.screen.height : Math.max(window.innerHeight, document.documentElement.clientHeight, (window.visualViewport && window.visualViewport.height) || 0);
+        canvas.width = w;
+        canvas.height = h;
+        // Keep CSS height in sync for layout (prevents visual shrink on some browsers)
+        canvas.style.height = h + 'px';
+        W = canvas.width;
+        H = canvas.height;
+    }
+    // initialize
+    resizeCanvas();
+    const particles = [];
+    
+    for (let i = 0; i < 60; i++) {
+        particles.push({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 3 + 1.5,
+            dx: (Math.random() - 0.5) * 1.2,
+            dy: (Math.random() - 0.5) * 1.2
+        });
+    }
+    
+    function animate() {
+        ctx.clearRect(0, 0, W, H);
+        particles.forEach(p => {
+            p.x += p.dx; 
+            p.y += p.dy;
+            p.dx += (Math.random() - 0.5) * 0.05; 
+            p.dy += (Math.random() - 0.5) * 0.05;
+            const maxSpeed = 1.5;
+            p.dx = Math.max(-maxSpeed, Math.min(maxSpeed, p.dx));
+            p.dy = Math.max(-maxSpeed, Math.min(maxSpeed, p.dy));
+            if (p.x < 0 || p.x > W) p.dx *= -1;
+            if (p.y < 0 || p.y > H) p.dy *= -1;
+            const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+            gradient.addColorStop(0, "#FFD700");
+            gradient.addColorStop(1, "rgba(212,175,53,0)");
+            ctx.fillStyle = gradient;
+            ctx.beginPath(); 
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); 
+            ctx.fill();
+        });
+        requestAnimationFrame(animate);
+    }
+    animate();
+    // keep canvas sized correctly on normal resize/orientation changes and visualViewport changes
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', resizeCanvas);
+    }
+
+    // Dropdown
+    const accountBtn = document.getElementById("accountBtn");
+    const accountWrapper = document.getElementById("accountWrapper");
+    const accountArrow = document.getElementById("accountArrow");
+    const menuOverlay = document.getElementById("menuOverlay");
+
+    // Move overlay and dropdown to document.body to avoid stacking-context issues
+    if (menuOverlay && menuOverlay.parentElement !== document.body) {
+        document.body.appendChild(menuOverlay);
+    }
+    if (accountWrapper && accountWrapper.parentElement !== document.body) {
+        document.body.appendChild(accountWrapper);
+    }
+
+    // Ensure zIndex is explicit (fallback)
+    accountWrapper.style.zIndex = '10005';
+    menuOverlay.style.zIndex = '10000';
+
+    // Make dropdown scrollable on mobile and set touch behaviors
+    accountWrapper.style.overflowY = 'auto';
+    accountWrapper.style['-webkit-overflow-scrolling'] = 'touch';
+    accountWrapper.style.touchAction = 'auto';
+    menuOverlay.style.touchAction = 'none';
+
+    // Touch handling: allow scrolling inside the menu, block background scroll on overlay
+    accountWrapper.addEventListener('touchmove', e => {
+        // let menu handle scrolling
+        e.stopPropagation();
+    }, { passive: true });
+
+    menuOverlay.addEventListener('touchmove', e => {
+        // prevent background from scrolling when overlay is shown
+        if (menuOverlay.classList.contains('show')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    accountBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        // position menu right under the button (keeps it visible on scroll)
+        const rect = accountBtn.getBoundingClientRect();
+        // if menu would overflow bottom, flip above
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const desiredTop = (spaceBelow < 220) ? (rect.top - 8) - accountWrapper.offsetHeight : rect.bottom + 8;
+
+        // On small screens make dropdown full-width under header
+        if (window.innerWidth <= 640) {
+            accountWrapper.style.top = '64px';
+            accountWrapper.style.left = '12px';
+            accountWrapper.style.right = '12px';
+            accountWrapper.style.width = 'auto';
+        } else {
+            accountWrapper.style.top = (desiredTop) + 'px';
+            // ensure horizontal alignment respects dir
+            if (document.documentElement.getAttribute('dir') === 'rtl') {
+                accountWrapper.style.right = '12px';
+                accountWrapper.style.left = 'auto';
+            } else {
+                accountWrapper.style.left = '12px';
+                accountWrapper.style.right = 'auto';
+            }
+        }
+
+        const isOpen = accountWrapper.classList.toggle("show");
+        accountArrow.classList.toggle("rotate-180", isOpen);
+        menuOverlay.classList.toggle("show", isOpen);
+
+        // lock background scroll on mobile and recalc canvas (fixes shrink issue)
+        if (window.innerWidth <= 640) {
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+        }
+        resizeCanvas();
+    });
+
+    document.addEventListener("click", () => {
+        accountWrapper.classList.remove("show");
+        accountArrow.classList.remove("rotate-180");
+        menuOverlay.classList.remove("show");
+        document.body.style.overflow = '';
+        resizeCanvas();
+    });
+
+    accountWrapper.addEventListener("click", e => e.stopPropagation());
+
+    menuOverlay.addEventListener("click", () => {
+        accountWrapper.classList.remove("show");
+        accountArrow.classList.remove("rotate-180");
+        menuOverlay.classList.remove("show");
+        document.body.style.overflow = '';
+        resizeCanvas();
+    });
+    // Language Switch + Translations
+    const langAr = document.getElementById("langAr");
+    const langEn = document.getElementById("langEn");
+    const html = document.documentElement;
+
+    const translations = {
+        ar: {
+            accountName: 'Super Admin',
+            headerTitle: 'AURVEX',
+            overviewTitle: 'نظرة عامة على الداشبورد',
+            todayLabel: 'تاريخ اليوم:',
+            shopsCountLabel: 'عدد المحلات المشتركة',
+            growthLabel: '+12% عن الشهر الماضي',
+            shopsListTitle: 'قائمة المحلات',
+            table: {
+                shopHeader: 'اسم المحل',
+                amountHeader: 'المبلغ المدفوع',
+                durationHeader: 'مدة الاشتراك (شهور)',
+                startHeader: 'تاريخ التفعيل',
+                endHeader: 'تاريخ الانتهاء',
+                daysHeader: 'الأيام المتبقية',
+                daysUnit: 'أيام',
+                shopColumn: 'المحل'
+            },
+            menu: {
+                profile: 'الملف الشخصي',
+                settings: 'الإعدادات',
+                logout: 'تسجيل خروج',
+                dashboard: 'الداشبورد الرئيسي',
+                addShop: 'إضافة Shop',
+                deleteShop: 'حذف Shop',
+                addAdmin: 'إنشاء حساب Admin',
+                addEmployee: 'إنشاء حساب Employee',
+                editShop: 'تعديل بيانات أي محل',
+                activate: 'تفعيل اشتراك Shop',
+                deactivate: 'إلغاء تفعيل اشتراك Shop',
+                addSuperAdmin: 'إضافة سوبر ادمن',
+                deleteAdmin: 'حذف ادمن',
+                deleteEmployee: 'حذف عامل',
+                aiChat: 'الدردشة الذكية',
+                reports: 'الإبلاغات والشكاوى',
+                addShopFormTitle: 'إضافة متجر',
+                addShopNameLabel: 'اسم المتجر',
+                addShopAmountLabel: 'المبلغ المدفوع',
+                addShopDurationLabel: 'مدة الاشتراك (شهور)',
+                addShopStartLabel: 'تاريخ التفعيل',
+                addShopSubmit: 'إضافة',
+                addShopCancel: 'إلغاء',
+                addShopNameExists: 'هذا الاسم مستخدم',
+                refresh: 'تحديث',
+                refreshing: 'جاري التحديث...',
+                serverError: 'فشل الاتصال بالخادم',
+                addAdminFormTitle: 'إنشاء حساب Admin',
+                adminNameLabel: 'الاسم',
+                adminShopLabel: 'اختر المحل',
+                adminEmailLabel: 'البريد الإلكتروني',
+                adminCodeLabel: 'الكود',
+                employeeNameLabel: 'الاسم',
+                employeeEmailLabel: 'البريد الإلكتروني',
+                employeeCodeLabel: 'الكود',
+                generateNew: 'إعادة توليد',
+                copyBtn: 'نسخ',
+                adminAdded: 'تم إنشاء الأدمن',
+                employeeAdded: 'تم إنشاء العامل',
+                noShops: 'لا توجد محلات متاحة'
+            }
+        },
+        en: {
+            accountName: 'Super Admin',
+            headerTitle: 'AURVEX',
+            overviewTitle: 'Overview',
+            todayLabel: 'Today:',
+            shopsCountLabel: 'Subscribed Shops',
+            growthLabel: '+12% from last month',
+            shopsListTitle: 'Shops List',
+            table: {
+                shopHeader: 'Shop Name',
+                amountHeader: 'Amount Paid',
+                durationHeader: 'Duration (months)',
+                startHeader: 'Start Date',
+                endHeader: 'End Date',
+                daysHeader: 'Days Remaining',
+                daysUnit: 'days',
+                shopColumn: 'Shop'
+            },
+            menu: {
+                profile: 'Profile',
+                settings: 'Settings',
+                logout: 'Logout',
+                dashboard: 'Main Dashboard',
+                addShop: 'Add Shop',
+                deleteShop: 'Delete Shop',
+                addAdmin: 'Create Admin',
+                addEmployee: 'Create Employee',
+                editShop: 'Edit Shop Info',
+                activate: 'Activate Shop Subscription',
+                deactivate: 'Deactivate Shop Subscription',
+                addSuperAdmin: 'Add Super Admin',
+                deleteAdmin: 'Delete Admin',
+                deleteEmployee: 'Delete Employee',
+                aiChat: 'AI Chat',
+                reports: 'Reports & Complaints',
+                addShopFormTitle: 'Add Shop',
+                addShopNameLabel: 'Shop Name',
+                addShopAmountLabel: 'Amount Paid',
+                addShopDurationLabel: 'Duration (months)',
+                addShopStartLabel: 'Start Date',
+                addShopSubmit: 'Add',
+                addShopCancel: 'Cancel',
+                addShopNameExists: 'A shop with that name already exists',
+                refresh: 'Refresh',
+                refreshing: 'Refreshing...',
+                serverError: 'Server error',
+                addAdminFormTitle: 'Create Admin',
+                adminNameLabel: 'Name',
+                adminShopLabel: 'Select Shop',
+                adminEmailLabel: 'Email',
+                adminCodeLabel: 'Code',
+                employeeNameLabel: 'Name',
+                employeeEmailLabel: 'Email',
+                employeeCodeLabel: 'Code',
+                generateNew: 'Regenerate',
+                copyBtn: 'Copy',
+                adminAdded: 'Admin created',
+                employeeAdded: 'Employee created',
+                noShops: 'No shops available'
+            }
+        }
+    };
+
+    function updateTodayDate(lang) {
+        const el = document.getElementById('todayDate');
+        if (!el) return;
+        const now = new Date();
+        const locale = (lang === 'ar') ? 'ar-EG' : 'en-US';
+        const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+        el.innerText = new Intl.DateTimeFormat(locale, opts).format(now);
+    }
+
+    // global state for subscription toggle (default: active)
+    let shopSubscriptionActive = true;
+
+    function setLanguage(lang) {
+        const t = translations[lang] || translations.ar;
+        html.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        html.setAttribute('lang', lang === 'ar' ? 'ar' : 'en');
+
+        // buttons active state
+        if (lang === 'ar') {
+            langAr.classList.add('text-primary'); langEn.classList.remove('text-primary');
+        } else {
+            langEn.classList.add('text-primary'); langAr.classList.remove('text-primary');
+        }
+
+        // update text content safely (if element exists)
+        const safeSet = (sel, value) => { const el = document.querySelector(sel); if (el) el.innerText = value; };
+        safeSet('#accountName', t.accountName);
+        safeSet('.header-title', t.headerTitle);
+        safeSet('.overview-title', t.overviewTitle);
+        safeSet('.today-label', t.todayLabel);
+        safeSet('.shops-count-label', t.shopsCountLabel);
+        safeSet('.growth-label', t.growthLabel);
+        safeSet('.shops-list-title', t.shopsListTitle);
+        // refresh button & shops title (modal-aware)
+        safeSet('.shops-list-title-text', t.shopsListTitle);
+        if (document.getElementById('refreshShopsBtn')) document.getElementById('refreshShopsBtn').innerText = t.menu.refresh || 'Refresh';
+
+        // table headers & day units
+        safeSet('.table-shop-name', t.table.shopHeader);
+        safeSet('.table-amount', t.table.amountHeader);
+        safeSet('.table-duration', t.table.durationHeader);
+        safeSet('.table-start', t.table.startHeader);
+        safeSet('.table-end', t.table.endHeader);
+        safeSet('.table-remaining', t.table.daysHeader);
+        document.querySelectorAll('.days-unit').forEach(el => el.innerText = t.table.daysUnit);
+
+        // menu items
+        safeSet('.menu-profile', t.menu.profile);
+        safeSet('.menu-settings', t.menu.settings);
+        safeSet('.menu-logout', t.menu.logout);
+        safeSet('.menu-dashboard', t.menu.dashboard);
+        safeSet('.menu-ai-chat', t.menu.aiChat);
+        safeSet('.menu-reports', t.menu.reports);
+        safeSet('.menu-add-shop', t.menu.addShop);
+        safeSet('.menu-delete-shop', t.menu.deleteShop);
+        safeSet('.menu-add-admin', t.menu.addAdmin);
+        safeSet('.menu-add-employee', t.menu.addEmployee);
+        safeSet('.menu-edit-shop', t.menu.editShop);
+        // toggle subscription (single action) and super-admin actions
+        safeSet('.menu-toggle-sub', shopSubscriptionActive ? t.menu.deactivate : t.menu.activate);
+        safeSet('.menu-add-super-admin', t.menu.addSuperAdmin);
+        safeSet('.menu-delete-admin', t.menu.deleteAdmin);
+        safeSet('.menu-delete-employee', t.menu.deleteEmployee);
+        // modal labels for Add Shop (localized)
+        safeSet('#addShopModalTitle', t.menu.addShopFormTitle || t.menu.addShop);
+        safeSet('#addShopNameLabel', t.menu.addShopNameLabel || 'Shop Name');
+        safeSet('#addShopAmountLabel', t.menu.addShopAmountLabel || 'Amount Paid');
+        safeSet('#addShopDurationLabel', t.menu.addShopDurationLabel || 'Duration (months)');
+        safeSet('#addShopStartLabel', t.menu.addShopStartLabel || 'Start Date');
+        if (document.getElementById('addShopSubmit')) document.getElementById('addShopSubmit').innerText = t.menu.addShopSubmit || 'Add';
+        if (document.getElementById('addShopCancel')) document.getElementById('addShopCancel').innerText = t.menu.addShopCancel || 'Cancel';
+
+        // modal labels for Admin
+        safeSet('#addAdminModalTitle', t.menu.addAdminFormTitle || t.menu.addAdmin);
+        safeSet('#addAdminNameLabel', t.menu.adminNameLabel || 'Admin Name');
+        safeSet('#addAdminShopLabel', t.menu.adminShopLabel || 'Select Shop');
+        safeSet('#addAdminEmailLabel', t.menu.adminEmailLabel || 'Email');
+        safeSet('#addAdminCodeLabel', t.menu.adminCodeLabel || 'Code');
+        if (document.getElementById('addAdminSubmit')) document.getElementById('addAdminSubmit').innerText = (lang === 'ar' ? 'إنشاء' : 'Create');
+        if (document.getElementById('addAdminRegenerate')) document.getElementById('addAdminRegenerate').innerText = t.menu.generateNew || 'Regenerate';
+        if (document.getElementById('addAdminCopyEmail')) document.getElementById('addAdminCopyEmail').innerText = t.menu.copyBtn || 'Copy';
+        if (document.getElementById('addAdminCopyCode')) document.getElementById('addAdminCopyCode').innerText = t.menu.copyBtn || 'Copy';
+
+        // modal labels for Employee
+        safeSet('#addEmployeeModalTitle', t.menu.addEmployee || t.menu.addEmployee);
+        safeSet('#addEmployeeNameLabel', t.menu.employeeNameLabel || 'Employee Name');
+        safeSet('#addEmployeeShopLabel', t.menu.adminShopLabel || 'Select Shop');
+        safeSet('#addEmployeeEmailLabel', t.menu.employeeEmailLabel || 'Email');
+        safeSet('#addEmployeeCodeLabel', t.menu.employeeCodeLabel || 'Code');
+        if (document.getElementById('addEmployeeSubmit')) document.getElementById('addEmployeeSubmit').innerText = (lang === 'ar' ? 'إنشاء' : 'Create');
+        if (document.getElementById('addEmployeeRegenerate')) document.getElementById('addEmployeeRegenerate').innerText = t.menu.generateNew || 'Regenerate';
+        if (document.getElementById('addEmployeeCopyEmail')) document.getElementById('addEmployeeCopyEmail').innerText = t.menu.copyBtn || 'Copy';
+        if (document.getElementById('addEmployeeCopyCode')) document.getElementById('addEmployeeCopyCode').innerText = t.menu.copyBtn || 'Copy';
+
+        // admin/employee table headers - use same labels for consistency
+        safeSet('.table-admin-name', t.menu.adminNameLabel);
+        safeSet('.table-admin-email', t.menu.adminEmailLabel);
+        safeSet('.table-admin-code', t.menu.adminCodeLabel);
+        safeSet('.table-admin-shop', t.table.shopColumn);
+        safeSet('.table-employee-name', t.menu.employeeNameLabel);
+        safeSet('.table-employee-email', t.menu.employeeEmailLabel);
+        safeSet('.table-employee-code', t.menu.employeeCodeLabel);
+        safeSet('.table-employee-shop', t.table.shopColumn);
+        // update icon for toggle
+        if (document.getElementById('menuToggleSub')) {
+            document.getElementById('menuToggleSub').querySelector('.material-symbols-outlined').innerText = shopSubscriptionActive ? 'toggle_on' : 'toggle_off';
+        }
+
+        // place header controls flush to edges
+        if (lang === 'ar') {
+            document.querySelector('.header-account').style.right = '12px';
+            document.querySelector('.header-account').style.left = 'auto';
+            document.querySelector('.header-lang').style.left = '12px';
+            document.querySelector('.header-lang').style.right = 'auto';
+            accountWrapper.style.right = '12px';
+            accountWrapper.style.left = 'auto';
+        } else {
+            document.querySelector('.header-account').style.left = '12px';
+            document.querySelector('.header-account').style.right = 'auto';
+            document.querySelector('.header-lang').style.right = '12px';
+            document.querySelector('.header-lang').style.left = 'auto';
+            accountWrapper.style.left = '12px';
+            accountWrapper.style.right = 'auto';
+        }
+
+        // close any open menu/overlay
+        menuOverlay.classList.remove('show');
+        accountWrapper.classList.remove('show');
+        accountArrow.classList.remove('rotate-180');
+
+        // update any locale-sensitive dates
+        updateTodayDate(lang);
+    }
+
+    // Subscription toggle & admin actions handlers
+    function renderSubscriptionLabel() {
+        const el = document.getElementById('menuToggleSub');
+        if (!el) return;
+        const icon = el.querySelector('.material-symbols-outlined.toggle-icon');
+        const label = el.querySelector('.menu-toggle-sub');
+        const lang = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+        const t = translations[lang].menu;
+        if (icon) icon.innerText = shopSubscriptionActive ? 'toggle_on' : 'toggle_off';
+        if (label) label.innerText = shopSubscriptionActive ? t.deactivate : t.activate;
+        // set href so the user is taken to a management page for the chosen action
+        const action = shopSubscriptionActive ? 'deactivate' : 'activate';
+        el.setAttribute('href', `manage-subscription.html?action=${action}`);
+        el.setAttribute('aria-label', label ? label.innerText : action);
+    }
+
+    function toggleSubscriptionAction() {
+        shopSubscriptionActive = !shopSubscriptionActive;
+        renderSubscriptionLabel();
+        const isAr = document.documentElement.getAttribute('lang') === 'ar';
+        alert(isAr ? (shopSubscriptionActive ? 'تم تفعيل الاشتراك' : 'تم إلغاء تفعيل الاشتراك') : (shopSubscriptionActive ? 'Subscription activated' : 'Subscription deactivated'));
+    }
+
+    function addSuperAdmin() {
+        const isAr = document.documentElement.getAttribute('lang') === 'ar';
+        const name = prompt(isAr ? 'أدخل اسم السوبر أدمن:' : 'Enter super admin name:');
+        if (!name) return;
+        alert(isAr ? `تم إضافة سوبر أدمن: ${name}` : `Super admin added: ${name}`);
+    }
+
+    function addAdmin() {
+        showAddAdminModal();
+    }
+
+    function deleteAdmin() {
+        const isAr = document.documentElement.getAttribute('lang') === 'ar';
+        const email = prompt(isAr ? 'أدخل إيميل الأدمن للحذف:' : 'Enter admin email to delete:');
+        if (!email) return;
+        // remove from table if exists
+        const tbody = document.getElementById('adminsTbody');
+        const row = Array.from(tbody.querySelectorAll('tr')).find(r => r.children[1] && r.children[1].innerText.trim().toLowerCase() === email.trim().toLowerCase());
+        if (row) {
+            if (confirm(isAr ? `هل متأكد من حذف الأدمن ${email}?` : `Are you sure you want to delete admin ${email}?`)) {
+                row.remove();
+                alert(isAr ? `تم حذف الأدمن: ${email}` : `Admin deleted: ${email}`);
+            }
+        } else {
+            alert(isAr ? 'لم أجد أدمن بهذا الإيميل' : 'No admin found with that email');
+        }
+    }
+
+    function deleteEmployee() {
+        const isAr = document.documentElement.getAttribute('lang') === 'ar';
+        const email = prompt(isAr ? 'أدخل إيميل العامل للحذف:' : 'Enter employee email to delete:');
+        if (!email) return;
+        const tbody = document.getElementById('employeesTbody');
+        const row = Array.from(tbody.querySelectorAll('tr')).find(r => r.children[1] && r.children[1].innerText.trim().toLowerCase() === email.trim().toLowerCase());
+        if (row) {
+            if (confirm(isAr ? `هل متأكد من حذف العامل ${email}?` : `Are you sure you want to delete employee ${email}?`)) {
+                row.remove();
+                alert(isAr ? `تم حذف العامل: ${email}` : `Employee deleted: ${email}`);
+            }
+        } else {
+            alert(isAr ? 'لم أجد عامل بهذا الإيميل' : 'No employee found with that email');
+        }
+    }
+
+    // ---- shop table helpers ----
+    function recalcShopsCount() {
+        const countEl = document.getElementById('shopsCount');
+        if (!countEl) return;
+        const rows = document.querySelectorAll('table tbody tr');
+        countEl.innerText = rows.length;
+    }
+
+    function updateDaysRemaining() {
+        const rows = document.querySelectorAll('table tbody tr');
+        const now = new Date();
+        rows.forEach(tr => {
+            const endText = tr.children[4]?.innerText?.trim();
+            if (!endText) return;
+            const endDate = new Date(endText);
+            if (isNaN(endDate)) return;
+            const days = Math.max(0, Math.ceil((endDate - now) / (1000*60*60*24)));
+            const valEl = tr.querySelector('.days-value');
+            if (valEl) valEl.innerText = days;
+        });
+    }
+
+    function addShopInTable({name, amount = '0', durationMonths = 1, startDate = null}) {
+        const tbody = document.querySelector('table tbody');
+        if (!tbody) return false;
+        const normName = name.trim().toLowerCase();
+        // prevent duplicates by shop name (case-insensitive)
+        const exists = Array.from(tbody.querySelectorAll('tr')).some(tr => (tr.children[0] && tr.children[0].innerText.trim().toLowerCase()) === normName);
+        if (exists) {
+            const isAr = document.documentElement.getAttribute('lang') === 'ar';
+            alert(isAr ? 'يوجد متجر بنفس الاسم بالفعل' : 'A shop with that name already exists');
+            return false;
+        }
+        const start = startDate ? new Date(startDate) : new Date();
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + Number(durationMonths));
+        const pad = n => (n < 10 ? '0'+n : n);
+        const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        const now = new Date();
+        const daysRemaining = Math.max(0, Math.ceil((end - now)/(1000*60*60*24)));
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${amount}</td><td>${durationMonths}</td><td>${fmt(start)}</td><td>${fmt(end)}</td><td class="text-green-400 font-bold"><span class="days-value">${daysRemaining}</span> <span class="days-unit">${document.querySelector('.days-unit') ? document.querySelector('.days-unit').innerText : 'أيام'}</span></td>`;
+        tbody.appendChild(tr);
+        recalcShopsCount();
+        return true;
+    }
+
+
+
+    function deleteShop() {
+        const isAr = document.documentElement.getAttribute('lang') === 'ar';
+        const identifier = prompt(isAr ? 'أدخل اسم المتجر أو ID لحذفه:' : 'Enter shop name or ID to delete:');
+        if (!identifier) return;
+        const tbody = document.querySelector('table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const found = rows.find(tr => (tr.children[0] && tr.children[0].innerText.trim().toLowerCase()) === identifier.trim().toLowerCase());
+        if (found) {
+            if (confirm(isAr ? `هل متأكد من حذف المتجر ${identifier}?` : `Are you sure you want to delete shop ${identifier}?`)) {
+                found.remove();
+                recalcShopsCount();
+                alert(isAr ? `تم حذف المتجر: ${identifier}` : `Shop deleted: ${identifier}`);
+            }
+        } else {
+            alert(isAr ? 'لم أجد متجرًا بهذا الاسم' : 'No shop found with that name/ID');
+        }
+    }
+
+    // ---- Add Shop Modal and live validation ----
+    function isShopNameTaken(name) {
+        const tbody = document.querySelector('table tbody');
+        if (!tbody) return false;
+        const norm = name.trim().toLowerCase();
+        return Array.from(tbody.querySelectorAll('tr')).some(tr => (tr.children[0] && tr.children[0].innerText.trim().toLowerCase()) === norm);
+    }
+
+    function showAddShopModal() {
+        const modal = document.getElementById('addShopModal');
+        if (!modal) return;
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden','false');
+        // reset fields
+        const form = document.getElementById('addShopForm');
+        form.reset();
+        document.getElementById('addShopNameError').innerText = '';
+        document.getElementById('addShopSubmit').disabled = true; // require typing name to enable
+        document.getElementById('addShopName').value = '';
+        // local-only: no server sync
+        
+        // focus name input
+        setTimeout(() => document.getElementById('addShopName').focus(), 50);
+    }
+
+    function hideAddShopModal() {
+        const modal = document.getElementById('addShopModal');
+        if (!modal) return;
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden','true');
+    }
+
+    function initializeAddShopModal() {
+        const modal = document.getElementById('addShopModal');
+        if (!modal) return;
+        const nameInput = document.getElementById('addShopName');
+        const errorEl = document.getElementById('addShopNameError');
+        const submitBtn = document.getElementById('addShopSubmit');
+        const form = document.getElementById('addShopForm');
+        const cancelBtn = document.getElementById('addShopCancel');
+
+        nameInput.addEventListener('input', () => {
+            const val = nameInput.value || '';
+            const isAr = document.documentElement.getAttribute('lang') === 'ar';
+            // empty -> reset
+            if (!val.trim()) { errorEl.innerText = ''; submitBtn.disabled = true; return; }
+            // local check only
+            const takenLocal = isShopNameTaken(val);
+            if (takenLocal) { errorEl.innerText = translations[isAr ? 'ar' : 'en'].menu.addShopNameExists; submitBtn.disabled = true; return; }
+            errorEl.innerText = '';
+            submitBtn.disabled = false;
+        });
+
+        cancelBtn.addEventListener('click', () => hideAddShopModal());
+        modal.querySelector('.modal-overlay').addEventListener('click', () => hideAddShopModal());
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = nameInput.value.trim();
+            if (!name) return;
+            const amount = document.getElementById('addShopAmount').value || '0';
+            const duration = document.getElementById('addShopDuration').value || '1';
+            const start = document.getElementById('addShopStart').value || null;
+
+            const isAr = document.documentElement.getAttribute('lang') === 'ar';
+            const t = translations[isAr ? 'ar' : 'en'].menu;
+
+            // final local check against rendered table
+            if (isShopNameTaken(name)) {
+                document.getElementById('addShopNameError').innerText = t.addShopNameExists;
+                document.getElementById('addShopName').focus();
+                return;
+            }
+
+            // add locally (no server-side checks)
+            const added = addShopInTable({name, amount, durationMonths: duration, startDate: start});
+            if (!added) return;
+
+            alert(isAr ? 'تم إضافة المتجر' : 'Shop added');
+            hideAddShopModal();
+        });
+    }
+
+    // initialize modal handlers now
+    initializeAddShopModal();
+
+    // ---- Admin / Employee helpers ----
+    function getShopsFromTable() {
+        const tbody = document.querySelector('table tbody');
+        if (!tbody) return [];
+        return Array.from(tbody.querySelectorAll('tr')).map(tr => (tr.children[0] && tr.children[0].innerText.trim()) || '').filter(Boolean);
+    }
+
+    function populateShopSelect(selectEl) {
+        if (!selectEl) return;
+        const shops = getShopsFromTable();
+        selectEl.innerHTML = '';
+        const lang = document.documentElement.getAttribute('lang') === 'ar' ? 'ar' : 'en';
+        const placeholderText = translations[lang].menu.adminShopLabel || (lang === 'ar' ? 'اختر المحل' : 'Select Shop');
+        const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.innerText = placeholderText; placeholder.disabled = true; selectEl.appendChild(placeholder);
+        if (!shops.length) {
+            const opt = document.createElement('option'); opt.value = ''; opt.innerText = translations[lang].menu.noShops || 'No shops available'; opt.disabled = true; opt.selected = true; selectEl.appendChild(opt); selectEl.disabled = true; return;
+        }
+        shops.forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.innerText = s; selectEl.appendChild(opt); });
+        // select first actual shop so it's visible by default
+        selectEl.selectedIndex = 1;
+        selectEl.disabled = false;
+    }
+
+    function slugify(text) {
+        return text.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/(^\.|\.$)/g, '');
+    }
+
+    function generateEmail(name, shop) {
+        const n = slugify(name.split(' ')[0] || name) || 'user';
+        const s = slugify(shop) || 'shop';
+        return `${n}@${s}.local`;
+    }
+
+    function generateCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let out = '';
+        for (let i = 0; i < 6; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+        return out;
+    }
+
+    function copyToClipboard(text) {
+        if (!navigator.clipboard) {
+            const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch(e){} ta.remove(); return;
+        }
+        navigator.clipboard.writeText(text).catch(()=>{});
+    }
+
+    function addAdminInTable({name, email, code, shop}) {
+        const tbody = document.getElementById('adminsTbody');
+        if (!tbody) return;
+        // prevent duplicate emails
+        const exists = Array.from(tbody.querySelectorAll('tr')).some(r => r.children[1] && r.children[1].innerText.trim().toLowerCase() === email.trim().toLowerCase());
+        if (exists) return false;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td><td>${shop}</td>`;
+        tbody.appendChild(tr);
+        return true;
+    }
+
+    function addEmployeeInTable({name, email, code, shop}) {
+        const tbody = document.getElementById('employeesTbody');
+        if (!tbody) return;
+        const exists = Array.from(tbody.querySelectorAll('tr')).some(r => r.children[1] && r.children[1].innerText.trim().toLowerCase() === email.trim().toLowerCase());
+        if (exists) return false;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td><td>${shop}</td>`;
+        tbody.appendChild(tr);
+        return true;
+    }
+
+    function showAddAdminModal() {
+        const modal = document.getElementById('addAdminModal'); if (!modal) return;
+        // mark modal as strong so backdrop becomes heavier and it sits above everything
+        modal.classList.add('show','strong'); modal.setAttribute('aria-hidden','false');
+        const form = document.getElementById('addAdminForm'); form.reset();
+        const name = document.getElementById('addAdminName'); const shopSel = document.getElementById('addAdminShop'); const email = document.getElementById('addAdminEmail'); const code = document.getElementById('addAdminCode');
+        populateShopSelect(shopSel);
+        email.value = '';
+        code.value = generateCode();
+        document.getElementById('addAdminSubmit').disabled = true;
+        // add a small timeout then focus name for smoother visual
+        setTimeout(()=>name.focus(),50);
+    }
+    function hideAddAdminModal(){ const m=document.getElementById('addAdminModal'); if(!m)return; m.classList.remove('show','strong'); m.setAttribute('aria-hidden','true'); }
+
+    function showAddEmployeeModal() {
+        const modal = document.getElementById('addEmployeeModal'); if (!modal) return;
+        modal.classList.add('show','strong'); modal.setAttribute('aria-hidden','false');
+        const form = document.getElementById('addEmployeeForm'); form.reset();
+        const name = document.getElementById('addEmployeeName'); const shopSel = document.getElementById('addEmployeeShop'); const email = document.getElementById('addEmployeeEmail'); const code = document.getElementById('addEmployeeCode');
+        populateShopSelect(shopSel);
+        email.value = '';
+        code.value = generateCode();
+        document.getElementById('addEmployeeSubmit').disabled = true;
+        setTimeout(()=>name.focus(),50);
+    }
+    function hideAddEmployeeModal(){ const m=document.getElementById('addEmployeeModal'); if(!m)return; m.classList.remove('show','strong'); m.setAttribute('aria-hidden','true'); }
+
+    function initializeAddAdminModal() {
+        const modal = document.getElementById('addAdminModal'); if (!modal) return;
+        const name = document.getElementById('addAdminName'); const shopSel = document.getElementById('addAdminShop'); const email = document.getElementById('addAdminEmail'); const code = document.getElementById('addAdminCode');
+        const submit = document.getElementById('addAdminSubmit'); const cancel = document.getElementById('addAdminCancel');
+        const reg = document.getElementById('addAdminRegenerate'); const copyEmail = document.getElementById('addAdminCopyEmail'); const copyCode = document.getElementById('addAdminCopyCode');
+        name.addEventListener('input', ()=>{
+            const n = name.value.trim(); if (!n) { email.value = ''; submit.disabled = true; return; }
+            email.value = generateEmail(n, shopSel.value || 'shop'); submit.disabled = false;
+        });
+        shopSel.addEventListener('change', ()=>{ const n=name.value.trim(); if (n) email.value = generateEmail(n, shopSel.value || 'shop'); });
+        reg.addEventListener('click', ()=>{ code.value = generateCode(); });
+        copyEmail.addEventListener('click', ()=>{ copyToClipboard(email.value); });
+        copyCode.addEventListener('click', ()=>{ copyToClipboard(code.value); });
+        cancel.addEventListener('click', ()=> hideAddAdminModal());
+        modal.querySelector('.modal-overlay').addEventListener('click', ()=> hideAddAdminModal());
+        const form = document.getElementById('addAdminForm');
+        form.addEventListener('submit', (e)=>{ e.preventDefault(); const n=name.value.trim(); const s=shopSel.value || ''; const em=email.value || generateEmail(n,s); const c=code.value || generateCode(); if (!n||!s) return alert(translations[document.documentElement.getAttribute('lang')==='ar'?'ar':'en'].menu.noShops);
+            const added = addAdminInTable({name:n,email:em,code:c,shop:s}); if(!added){ alert('Email exists'); return; }
+            const isAr = document.documentElement.getAttribute('lang') === 'ar'; alert(isAr ? translations['ar'].menu.adminAdded : translations['en'].menu.adminAdded ); hideAddAdminModal();
+        });
+    }
+
+    function initializeAddEmployeeModal() {
+        const modal = document.getElementById('addEmployeeModal'); if (!modal) return;
+        const name = document.getElementById('addEmployeeName'); const shopSel = document.getElementById('addEmployeeShop'); const email = document.getElementById('addEmployeeEmail'); const code = document.getElementById('addEmployeeCode');
+        const submit = document.getElementById('addEmployeeSubmit'); const cancel = document.getElementById('addEmployeeCancel');
+        const reg = document.getElementById('addEmployeeRegenerate'); const copyEmail = document.getElementById('addEmployeeCopyEmail'); const copyCode = document.getElementById('addEmployeeCopyCode');
+        name.addEventListener('input', ()=>{ const n = name.value.trim(); if (!n) { email.value = ''; submit.disabled = true; return; } email.value = generateEmail(n, shopSel.value || 'shop'); submit.disabled = false; });
+        shopSel.addEventListener('change', ()=>{ const n=name.value.trim(); if (n) email.value = generateEmail(n, shopSel.value || 'shop'); });
+        reg.addEventListener('click', ()=>{ code.value = generateCode(); });
+        copyEmail.addEventListener('click', ()=>{ copyToClipboard(email.value); });
+        copyCode.addEventListener('click', ()=>{ copyToClipboard(code.value); });
+        cancel.addEventListener('click', ()=> hideAddEmployeeModal());
+        modal.querySelector('.modal-overlay').addEventListener('click', ()=> hideAddEmployeeModal());
+        const form = document.getElementById('addEmployeeForm');
+        form.addEventListener('submit', (e)=>{ e.preventDefault(); const n=name.value.trim(); const s=shopSel.value || ''; const em=email.value || generateEmail(n,s); const c=code.value || generateCode(); if (!n||!s) return alert(translations[document.documentElement.getAttribute('lang')==='ar'?'ar':'en'].menu.noShops);
+            const added = addEmployeeInTable({name:n,email:em,code:c,shop:s}); if(!added){ alert('Email exists'); return; }
+            const isAr = document.documentElement.getAttribute('lang') === 'ar'; alert(isAr ? translations['ar'].menu.employeeAdded : translations['en'].menu.employeeAdded ); hideAddEmployeeModal();
+        });
+    }
+
+    // initialize admin/employee modals
+    initializeAddAdminModal();
+    initializeAddEmployeeModal();
+
+
+
+    // wire menu add buttons to open modals
+    const menuAddAdminBtn = document.getElementById('menuAddAdmin');
+    if (menuAddAdminBtn) menuAddAdminBtn.addEventListener('click', e=>{ if (e.shiftKey||e.ctrlKey||e.metaKey) return; e.preventDefault(); showAddAdminModal(); });
+    const menuAddEmployeeBtn = document.getElementById('menuAddEmployee');
+    if (menuAddEmployeeBtn) menuAddEmployeeBtn.addEventListener('click', e=>{ if (e.shiftKey||e.ctrlKey||e.metaKey) return; e.preventDefault(); showAddEmployeeModal(); });
+
+    // No server integration: shops are managed locally in the page
+    const refreshBtn = document.getElementById('refreshShopsBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', (e) => { e.preventDefault(); /* no-op: list is local */ });
+
+    // wire up menu buttons (if present)
+    const menuToggleSubBtn = document.getElementById('menuToggleSub');
+    if (menuToggleSubBtn) {
+        // ensure it has a proper href initially; renderSubscriptionLabel will keep it updated
+        menuToggleSubBtn.setAttribute('href', `manage-subscription.html?action=${shopSubscriptionActive ? 'deactivate' : 'activate'}`);
+    }
+    const menuAddSuperAdminBtn = document.getElementById('menuAddSuperAdmin');
+    if (menuAddSuperAdminBtn) menuAddSuperAdminBtn.setAttribute('href', 'add-super-admin.html');
+    if (menuAddAdminBtn) menuAddAdminBtn.setAttribute('href', 'add-admin.html');
+    const menuAddShopBtn = document.getElementById('menuAddShop');
+    if (menuAddShopBtn) {
+        // open modal on normal click; shift-click will navigate to full page
+        menuAddShopBtn.addEventListener('click', e => {
+            if (e.shiftKey || e.ctrlKey || e.metaKey) return; // allow navigation with modifier key
+            e.preventDefault(); showAddShopModal();
+        });
+    }
+    if (menuAddEmployeeBtn) menuAddEmployeeBtn.setAttribute('href', 'add-employee.html');
+    const menuAIChatBtn = document.getElementById('menuAIChat');
+    if (menuAIChatBtn) menuAIChatBtn.setAttribute('href', 'ai-chat.html');
+    const menuReportsBtn = document.getElementById('menuReports');
+    if (menuReportsBtn) menuReportsBtn.setAttribute('href', 'reports.html');
+    const menuEditShopBtn = document.getElementById('menuEditShop');
+    if (menuEditShopBtn) menuEditShopBtn.setAttribute('href', 'edit-shop.html');
+    const menuDeleteAdminBtn = document.getElementById('menuDeleteAdmin');
+    if (menuDeleteAdminBtn) menuDeleteAdminBtn.addEventListener('click', e => { e.preventDefault(); deleteAdmin(); });
+    const menuDeleteEmployeeBtn = document.getElementById('menuDeleteEmployee');
+    if (menuDeleteEmployeeBtn) menuDeleteEmployeeBtn.addEventListener('click', e => { e.preventDefault(); deleteEmployee(); });
+    const menuDeleteShopBtn = document.getElementById('menuDeleteShop');
+    if (menuDeleteShopBtn) menuDeleteShopBtn.addEventListener('click', e => { e.preventDefault(); deleteShop(); });
+
+    // Touch feedback: add a temporary pressed class on touchstart for immediate visual response
+    ['touchstart','touchend','touchcancel'].forEach(evt => {
+        accountWrapper.addEventListener(evt, (e) => {
+            const a = e.target.closest ? e.target.closest('a') : null;
+            if (!a) return;
+            if (evt === 'touchstart') {
+                a.classList.add('touch-pressed');
+            } else {
+                a.classList.remove('touch-pressed');
+            }
+        }, { passive: true });
+    });
+
+    // Also improve accessibility: allow keyboard activation on Enter for items without handlers
+    accountWrapper.addEventListener('keydown', (e) => {
+        const a = e.target.closest ? e.target.closest('a') : null;
+        if (!a) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            a.click();
+        }
+    });
+
+    langAr.addEventListener("click", () => setLanguage('ar'));
+    langEn.addEventListener("click", () => setLanguage('en'));
+
+    // initialize language from html lang attribute or default to ar
+    const initialLang = html.getAttribute('lang') || (html.getAttribute('dir') === 'ltr' ? 'en' : 'ar');
+    setLanguage(initialLang);
+
+    // ensure subscription label is correct on load
+    renderSubscriptionLabel();
+});
+</script>
+
+<!-- Add Shop Modal -->
+<div id="addShopModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-overlay" data-close="true"></div>
+    <div class="modal-dialog aurvex-card" role="document" aria-labelledby="addShopModalTitle">
+        <h3 id="addShopModalTitle" class="text-xl font-bold mb-3">إضافة متجر</h3>
+        <form id="addShopForm">
+            <div class="form-row">
+                <label id="addShopNameLabel">اسم المتجر</label>
+                <input id="addShopName" type="text" autocomplete="off" required />
+                <div id="addShopNameError" class="error"></div>
+            </div>
+            <div class="form-row">
+                <label id="addShopAmountLabel">المبلغ المدفوع</label>
+                <input id="addShopAmount" type="number" min="0" />
+            </div>
+            <div class="form-row">
+                <label id="addShopDurationLabel">مدة الاشتراك (شهور)</label>
+                <input id="addShopDuration" type="number" min="1" value="1" />
+            </div>
+            <div class="form-row">
+                <label id="addShopStartLabel">تاريخ التفعيل</label>
+                <input id="addShopStart" type="date" />
+            </div>
+            <div class="actions">
+                <button type="button" id="addShopCancel" class="text-white bg-transparent border border-white/10">إلغاء</button>
+                <button type="submit" id="addShopSubmit" class="bg-primary text-black font-bold">إضافة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body></html>

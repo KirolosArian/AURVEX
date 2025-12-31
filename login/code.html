@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#1a1a1a"/>
+<title>AURVEX - System Login</title>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        primary: "#d4af35",
+        "background-dark": "#1a1a1a"
+      },
+      fontFamily: {
+        display: ["Manrope", "sans-serif"]
+      }
+    }
+  }
+}
+</script>
+
+<style>
+body {
+  background-image:
+    radial-gradient(circle at top left, rgba(212,175,53,0.1), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(212,175,53,0.1), transparent 30%);
+  margin:0;
+  overflow:hidden;
+}
+
+/* Canvas for particles */
+#bgCanvas {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+}
+
+/* Entrance Animation + Floating + Pulsating Glow */
+@keyframes entrance {
+  0% { opacity: 0; transform: translateX(-60px) rotate(-15deg) scale(0.8);}
+  50% { opacity: 0.8; transform: translateX(15px) rotate(5deg) scale(1.05);}
+  100% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1);}
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px);}
+  50% { transform: translateY(-6px);}
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(212,175,53,0.5);}
+  50% { box-shadow: 0 0 30px rgba(212,175,53,0.8);}
+}
+
+.animate-creative {
+  animation: entrance 1s ease-out forwards,
+             float 3s ease-in-out infinite alternate,
+             glow 2s ease-in-out infinite alternate;
+}
+</style>
+</head>
+
+<body class="font-display bg-background-dark">
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="min-h-screen flex items-center justify-center px-4" id="mainContent">
+  <div class="w-full max-w-md">
+
+    <!-- Framed Title with Super Creative Animation -->
+    <div class="flex justify-center mb-10">
+      <div class="px-8 py-4 rounded-xl border border-primary/60 bg-white/5 backdrop-blur text-center animate-creative" id="titleBox">
+        <h1 class="text-primary text-4xl font-extrabold tracking-widest">AURVEX</h1>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white/5 border border-white/10 rounded-xl p-8 backdrop-blur shadow-2xl" id="loginCard">
+
+      <h1 class="text-white text-3xl font-bold text-center mb-6">Login</h1>
+
+      <label class="block mb-4">
+        <p class="text-white font-medium mb-2">Email</p>
+        <div class="flex h-14 rounded-lg overflow-hidden border border-[#675a32] bg-[#332d19]">
+          <div class="w-14 flex items-center justify-center text-white/70 border-r border-[#675a32]">
+            <span class="material-symbols-outlined text-[24px]">mail</span>
+          </div>
+          <input id="email" type="email" autocomplete="email" placeholder="Enter your email"
+            class="flex-1 px-4 bg-transparent text-white placeholder:text-white/70 focus:outline-none"/>
+        </div>
+      </label>
+
+      <label class="block mb-6">
+        <p class="text-white font-medium mb-2">Password</p>
+        <div class="flex h-14 rounded-lg overflow-hidden border border-[#675a32] bg-[#332d19]">
+          <div class="w-14 flex items-center justify-center text-white/70 border-r border-[#675a32]">
+            <span class="material-symbols-outlined text-[24px]">lock</span>
+          </div>
+          <input id="password" type="password" autocomplete="current-password" placeholder="Enter your password"
+            class="flex-1 px-4 bg-transparent text-white placeholder:text-white/70 focus:outline-none"/>
+          <button id="togglePassword" type="button" class="w-14 flex items-center justify-center text-white/70 border-l border-[#675a32] hover:text-primary transition-colors bg-[#332d19]">
+            <span class="material-symbols-outlined text-[24px]">visibility_off</span>
+          </button>
+        </div>
+      </label>
+
+      <div class="flex justify-between items-center mb-6">
+        <label class="flex items-center gap-2 text-white/80 text-sm">
+          <input type="checkbox" class="form-checkbox bg-[#332d19] border-[#675a32] text-primary focus:ring-0"/>
+          Remember Me
+        </label>
+        <a href="#" class="text-sm text-primary hover:underline">Forgot Password?</a>
+      </div>
+
+      <button id="loginBtn" class="w-full h-14 rounded-lg bg-primary text-background-dark font-medium hover:bg-yellow-300 transition">
+        Login
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  // Toggle password
+  const password = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+  togglePassword.addEventListener("click", ()=>{
+    const hidden = password.type==="password";
+    password.type = hidden?"text":"password";
+    togglePassword.querySelector("span").textContent = hidden?"visibility":"visibility_off";
+  });
+
+  // Canvas for moving gold particles
+  const canvas = document.getElementById("bgCanvas");
+  const ctx = canvas.getContext("2d");
+  let W = canvas.width = window.innerWidth;
+  let H = canvas.height = window.innerHeight;
+
+  const particles = [];
+  const numParticles = 60;
+
+  const titleBox = document.getElementById("titleBox").getBoundingClientRect();
+  const loginCard = document.getElementById("loginCard").getBoundingClientRect();
+
+  for(let i=0;i<numParticles;i++){
+    particles.push({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      r: Math.random()*3+1.5,
+      dx: (Math.random()-0.5)*1.2,
+      dy: (Math.random()-0.5)*1.2
+    });
+  }
+
+  function animate(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.x += p.dx;
+      p.y += p.dy;
+
+      // slight random acceleration
+      p.dx += (Math.random()-0.5)*0.05;
+      p.dy += (Math.random()-0.5)*0.05;
+
+      const maxSpeed = 1.5;
+      if(p.dx>maxSpeed)p.dx=maxSpeed;
+      if(p.dx<-maxSpeed)p.dx=-maxSpeed;
+      if(p.dy>maxSpeed)p.dy=maxSpeed;
+      if(p.dy<-maxSpeed)p.dy=-maxSpeed;
+
+      // bounce edges
+      if(p.x<0||p.x>W)p.dx*=-1;
+      if(p.y<0||p.y>H)p.dy*=-1;
+
+      // avoid title and card
+      if((p.x>titleBox.left && p.x<titleBox.right && p.y>titleBox.top && p.y<titleBox.bottom)||
+         (p.x>loginCard.left && p.x<loginCard.right && p.y>loginCard.top && p.y<loginCard.bottom)){
+        p.dx*=-1;
+        p.dy*=-1;
+        p.x += p.dx*2;
+        p.y += p.dy*2;
+      }
+
+      // draw particle
+      const gradient = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      gradient.addColorStop(0,"#FFD700");
+      gradient.addColorStop(1,"rgba(212,175,53,0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  // resize canvas
+  window.addEventListener("resize",()=>{
+    W=canvas.width=window.innerWidth;
+    H=canvas.height=window.innerHeight;
+  });
+});
+</script>
+
+</body>
+</html>
