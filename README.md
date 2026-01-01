@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AURVEX Logo](https://qms.sut.edu.eg/api/ems/download/Projects/96/documents/Logo.jpeg)
+<img src="https://qms.sut.edu.eg/api/ems/download/Projects/96/documents/Logo.jpeg" width="150" alt="AURVEX Logo">
 
 ### ✨ Revolutionizing Jewelry Retail with Intelligent Automation ✨
 
@@ -26,6 +26,17 @@
 **AURVEX** is a cutting-edge, cloud-based management ecosystem specifically engineered for the gold and jewelry industry. It bridges the gap between traditional craftsmanship and modern technology by eliminating manual errors, preventing fraud, and providing actionable business intelligence.
 
 Unlike generic POS systems, AURVEX is built with the specific nuances of gold in mind—handling **karat variances**, **precise gram weights (0.001g)**, **making charges**, and **live market fluctuations** in real-time.
+
+---
+### 🔥 Why AURVEX?
+
+| 🎯 **Problem** | ✅ **AURVEX Solution** |
+|---|---|
+| ❌ Manual calculation errors causing financial losses | ✅ 100% Accurate automated pricing engine |
+| ❌ Security vulnerabilities & theft risks | ✅ Role-based access + audit logging |
+| ❌ 2-3 hours daily reconciliation time | ✅ <15 minutes automated settlement |
+| ❌ No real-time inventory visibility | ✅ Smart QR system + live tracking |
+| ❌ Lack of business insights | ✅ AI-powered predictions & analytics |
 
 ---
 
@@ -124,8 +135,8 @@ A dedicated team of engineers and developers from **Elsewedy University of Techn
 
 | **Supervision & Partnership** |
 | :---: |
-| **Academic Supervisor:** Eng. Aya Abdelnaby Ahmed |
-| **Industry Partner:** Baba Wanis Jewelry |
+| **🎓Academic Supervisor:** Eng. Aya Abdelnaby Ahmed |
+| **🏭Industry Partner:** Baba Wanis Jewelry |
 
 </div>
 
