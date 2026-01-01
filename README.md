@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AURVEX Logo](https://agi-prod-file-upload-public-main-use1.s3.amazonaws.com/3bac3daa-bfad-404c-b087-f1eb613b6c51)
+![AURVEX Logo](https://qms.sut.edu.eg/api/ems/download/Projects/96/documents/Logo.jpeg)
 
 ### ✨ Revolutionizing Jewelry Retail with Intelligent Automation ✨
 
